@@ -20,10 +20,27 @@ export function filterCases(cases: CaseRecord[], filters: CaseFilters): CaseReco
 }
 
 export function filterResources(resources: LearningResource[], filters: ResourceFilters): LearningResource[] {
+  const keyword = filters.keyword?.trim().toLowerCase();
+
   return resources.filter((item) => {
     if (filters.type && item.type !== filters.type) return false;
     if (filters.bodyPart && item.bodyPart !== filters.bodyPart) return false;
     if (filters.difficulty && item.difficulty !== filters.difficulty) return false;
+    if (filters.audience && item.audience !== filters.audience) return false;
+    if (filters.equipment && item.equipment !== filters.equipment) return false;
+    if (keyword) {
+      const searchable = [
+        item.title,
+        item.bodyPart,
+        item.audience,
+        item.equipment,
+        ...item.keyPoints,
+        ...item.cautions
+      ]
+        .join(" ")
+        .toLowerCase();
+      if (!searchable.includes(keyword)) return false;
+    }
     return true;
   });
 }

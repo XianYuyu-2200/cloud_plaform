@@ -1,4 +1,4 @@
-import type { CaseCategory, CaseFilters, CaseRecord, Gender, LearningResource } from "@smart-care/shared";
+import type { CaseCategory, CaseFilters, CaseRecord, Difficulty, Gender, LearningResource, ResourceFilters, ResourceType } from "@smart-care/shared";
 
 export interface Overview {
   className: string;
@@ -67,6 +67,14 @@ export interface CaseOptions {
   conditions: string[];
 }
 
+export interface ResourceOptions {
+  types: ResourceType[];
+  bodyParts: string[];
+  difficulties: Difficulty[];
+  audiences: string[];
+  equipment: string[];
+}
+
 async function getJson<T>(url: string): Promise<T> {
   const response = await fetch(url);
   if (!response.ok) {
@@ -112,8 +120,20 @@ export async function importCases(items: CaseRecord[]) {
   }>;
 }
 
-export function getResources() {
-  return getJson<{ items: LearningResource[] }>("/api/resources");
+export function getResources(filters: ResourceFilters = {}) {
+  const params = new URLSearchParams();
+  if (filters.type) params.set("type", filters.type);
+  if (filters.bodyPart) params.set("bodyPart", filters.bodyPart);
+  if (filters.difficulty) params.set("difficulty", filters.difficulty);
+  if (filters.audience) params.set("audience", filters.audience);
+  if (filters.equipment) params.set("equipment", filters.equipment);
+  if (filters.keyword) params.set("keyword", filters.keyword);
+  const query = params.toString();
+  return getJson<{ items: LearningResource[]; total?: number }>(`/api/resources${query ? `?${query}` : ""}`);
+}
+
+export function getResourceOptions() {
+  return getJson<ResourceOptions>("/api/resources/options");
 }
 
 export function getFallScenario() {

@@ -71,6 +71,22 @@ describe("platform API", () => {
     expect(response.body.items[0].title).toBe("平衡能力测评");
   });
 
+  it("returns resource filter options and applies advanced resource filters", async () => {
+    const options = await request(app).get("/api/resources/options").expect(200);
+
+    expect(options.body.bodyParts).toContain("下肢");
+    expect(options.body.audiences).toContain("老年人");
+    expect(options.body.equipment).toContain("秒表");
+
+    const response = await request(app)
+      .get("/api/resources")
+      .query({ audience: "老年人", equipment: "秒表", keyword: "地面防滑" })
+      .expect(200);
+
+    expect(response.body.items).toHaveLength(1);
+    expect(response.body.items[0].title).toBe("平衡能力测评");
+  });
+
   it("submits a fall simulation step and reports score", async () => {
     const created = await request(app).post("/api/simulations").send({ scenarioId: "fall-response" }).expect(201);
 

@@ -47,6 +47,9 @@ export interface ResourceFilters {
   type?: ResourceType;
   bodyPart?: string;
   difficulty?: Difficulty;
+  audience?: string;
+  equipment?: string;
+  keyword?: string;
 }
 
 export interface SimulationOption {

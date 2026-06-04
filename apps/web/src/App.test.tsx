@@ -110,18 +110,61 @@ vi.stubGlobal(
       });
     }
 
-    if (url.includes("/api/resources")) {
+    if (url.endsWith("/api/resources/options")) {
       return json({
-        items: [
-          {
-            id: "resource-001",
-            title: "平衡能力测评",
-            bodyPart: "下肢",
-            difficulty: "medium",
-            keyPoints: ["扶稳"],
-            cautions: ["防跌倒"]
-          }
-        ]
+        types: ["assessment", "exercise"],
+        bodyParts: ["下肢", "肩颈"],
+        difficulties: ["easy", "medium"],
+        audiences: ["老年人", "亚健康"],
+        equipment: ["秒表", "无"]
+      });
+    }
+
+    if (url.includes("/api/resources")) {
+      const filtered = url.includes("type=assessment") || url.includes("keyword=");
+      return json({
+        items: filtered
+          ? [
+              {
+                id: "resource-001",
+                title: "平衡能力测评",
+                type: "assessment",
+                bodyPart: "下肢",
+                difficulty: "medium",
+                audience: "老年人",
+                equipment: "秒表",
+                mediaUrl: "/media/balance.mp4",
+                keyPoints: ["扶稳"],
+                cautions: ["防跌倒"]
+              }
+            ]
+          : [
+              {
+                id: "resource-001",
+                title: "平衡能力测评",
+                type: "assessment",
+                bodyPart: "下肢",
+                difficulty: "medium",
+                audience: "老年人",
+                equipment: "秒表",
+                mediaUrl: "/media/balance.mp4",
+                keyPoints: ["扶稳"],
+                cautions: ["防跌倒"]
+              },
+              {
+                id: "resource-002",
+                title: "肩颈放松训练",
+                type: "exercise",
+                bodyPart: "肩颈",
+                difficulty: "easy",
+                audience: "亚健康",
+                equipment: "无",
+                mediaUrl: "/media/neck.mp4",
+                keyPoints: ["慢速"],
+                cautions: ["避免疼痛"]
+              }
+            ],
+        total: filtered ? 1 : 2
       });
     }
 
@@ -256,6 +299,38 @@ describe("App", () => {
         })
       ).toBe(true);
     });
+  });
+
+  it("filters the method and action library with resource conditions", async () => {
+    const fetchMock = vi.mocked(fetch);
+    render(<App />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "方法动作库" }));
+    expect(await screen.findByText("资源匹配：2项")).toBeInTheDocument();
+
+    await userEvent.click(await screen.findByRole("button", { name: "测评方法" }));
+    await userEvent.click(await screen.findByRole("button", { name: "下肢" }));
+    await userEvent.click(await screen.findByRole("button", { name: "老年人" }));
+    await userEvent.click(await screen.findByRole("button", { name: "秒表" }));
+    await userEvent.type(screen.getByPlaceholderText("搜索方法、动作、要点"), "防滑");
+
+    await waitFor(() => {
+      expect(
+        fetchMock.mock.calls.some(([input]) => {
+          const url = String(input);
+          return (
+            url.includes("/api/resources?") &&
+            url.includes("type=assessment") &&
+            url.includes("bodyPart=%E4%B8%8B%E8%82%A2") &&
+            url.includes("audience=%E8%80%81%E5%B9%B4%E4%BA%BA") &&
+            url.includes("equipment=%E7%A7%92%E8%A1%A8") &&
+            url.includes("keyword=%E9%98%B2%E6%BB%91")
+          );
+        })
+      ).toBe(true);
+    });
+    expect(await screen.findByText("资源匹配：1项")).toBeInTheDocument();
+    expect(await screen.findByText("适用：老年人 · 器械：秒表")).toBeInTheDocument();
   });
 
   it("uploads a batch case file and reports import feedback", async () => {

@@ -122,10 +122,23 @@ export function createRoutes() {
     const items = filterResources(resources, {
       type: request.query.type as ResourceType | undefined,
       bodyPart: request.query.bodyPart as string | undefined,
-      difficulty: request.query.difficulty as Difficulty | undefined
+      difficulty: request.query.difficulty as Difficulty | undefined,
+      audience: request.query.audience as string | undefined,
+      equipment: request.query.equipment as string | undefined,
+      keyword: request.query.keyword as string | undefined
     });
 
     response.json({ items, total: items.length });
+  });
+
+  router.get("/resources/options", (_request, response) => {
+    response.json({
+      types: uniqueValues(resources.map((item) => item.type)),
+      bodyParts: uniqueValues(resources.map((item) => item.bodyPart)),
+      difficulties: uniqueValues(resources.map((item) => item.difficulty)),
+      audiences: uniqueValues(resources.map((item) => item.audience)),
+      equipment: uniqueValues(resources.map((item) => item.equipment))
+    });
   });
 
   router.get("/resources/:id", (request, response) => {

@@ -86,4 +86,14 @@ describe("filterResources", () => {
       })
     ).toEqual([resources[0]]);
   });
+
+  it("filters resources by audience, equipment, and keyword", () => {
+    expect(
+      filterResources(resources, {
+        audience: "老年人",
+        equipment: "无",
+        keyword: "步态"
+      })
+    ).toEqual([resources[0]]);
+  });
 });

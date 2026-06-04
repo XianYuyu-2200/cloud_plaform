@@ -11,7 +11,14 @@ import {
   Video
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
-import type { CaseCategory, CaseFilters, CaseRecord, Gender, LearningResource } from "@smart-care/shared";
+import type {
+  CaseCategory,
+  CaseFilters,
+  CaseRecord,
+  Gender,
+  LearningResource,
+  ResourceFilters
+} from "@smart-care/shared";
 import {
   createSimulation,
   getAnalytics,
@@ -20,6 +27,7 @@ import {
   getEvaluationRules,
   getFallScenario,
   getOverview,
+  getResourceOptions,
   getResources,
   getSimulationReport,
   importCases,
@@ -29,6 +37,7 @@ import {
   type EvaluationRulesResponse,
   type FallScenario,
   type Overview,
+  type ResourceOptions,
   type SimulationReport
 } from "./api";
 import { parseCaseImportText } from "./caseImport";
@@ -95,6 +104,16 @@ function defaultCaseOptions(): CaseOptions {
   };
 }
 
+function defaultResourceOptions(): ResourceOptions {
+  return {
+    types: ["assessment", "exercise"],
+    bodyParts: [],
+    difficulties: ["easy", "medium", "hard"],
+    audiences: [],
+    equipment: []
+  };
+}
+
 function readFileText(file: File): Promise<string> {
   if (typeof file.text === "function") {
     return file.text();
@@ -116,6 +135,8 @@ export default function App() {
   const [caseFilters, setCaseFilters] = useState<Omit<CaseFilters, "category">>({});
   const [caseImportStatus, setCaseImportStatus] = useState<string | null>(null);
   const [resources, setResources] = useState<LearningResource[]>([]);
+  const [resourceOptions, setResourceOptions] = useState<ResourceOptions>(defaultResourceOptions);
+  const [resourceFilters, setResourceFilters] = useState<ResourceFilters>({});
   const [scenario, setScenario] = useState<FallScenario | null>(null);
   const [analytics, setAnalytics] = useState<ClassroomAnalytics>(defaultAnalytics);
   const [rules, setRules] = useState<EvaluationRulesResponse["rules"]>([]);
@@ -133,17 +154,34 @@ export default function App() {
   useEffect(() => {
     void Promise.all([
       getOverview().then(setOverview),
-      getResources().then((data) => setResources(data.items)),
       getFallScenario().then(setScenario),
       getAnalytics().then(setAnalytics),
       getEvaluationRules().then((data) => setRules(data.rules)),
-      getCaseOptions().then(setCaseOptions)
+      getCaseOptions().then(setCaseOptions),
+      getResourceOptions().then(setResourceOptions)
     ]);
   }, []);
 
   useEffect(() => {
     void getCases({ category: activeCategory, ...caseFilters }).then((data) => setCases(data.items));
   }, [activeCategory, caseFilters.ageRange, caseFilters.disease, caseFilters.gender, caseFilters.keyword, caseFilters.tag]);
+
+  useEffect(() => {
+    void getResources(resourceFilters).then((data) => {
+      setResources(data.items);
+      setSelectedResource((current) => {
+        if (current && data.items.some((item) => item.id === current.id)) return current;
+        return data.items[0] ?? null;
+      });
+    });
+  }, [
+    resourceFilters.audience,
+    resourceFilters.bodyPart,
+    resourceFilters.difficulty,
+    resourceFilters.equipment,
+    resourceFilters.keyword,
+    resourceFilters.type
+  ]);
 
   async function handleSimulationOption(stepId: string, optionId: string) {
     if (!scenario) return;
@@ -208,6 +246,17 @@ export default function App() {
     setActiveCategory("chronic");
   }
 
+  function updateResourceFilter<Key extends keyof ResourceFilters>(key: Key, value: ResourceFilters[Key] | undefined) {
+    setResourceFilters((current) => ({
+      ...current,
+      [key]: current[key] === value ? undefined : value
+    }));
+  }
+
+  function resetResourceFilters() {
+    setResourceFilters({});
+  }
+
   async function handleCaseFileImport(file: File) {
     const importedItems = parseCaseImportText(await readFileText(file), file.name);
     if (!importedItems.length) {
@@ -234,6 +283,8 @@ export default function App() {
     caseFilters,
     caseImportStatus,
     resources,
+    resourceOptions,
+    resourceFilters,
     scenario,
     analytics,
     rules,
@@ -253,6 +304,8 @@ export default function App() {
     setSelectedDimension,
     updateCaseFilter,
     resetCaseFilters,
+    updateResourceFilter,
+    resetResourceFilters,
     handleCaseFileImport,
     setActiveStepIndex,
     restartSimulation,
@@ -306,6 +359,8 @@ interface ViewProps {
   caseFilters: Omit<CaseFilters, "category">;
   caseImportStatus: string | null;
   resources: LearningResource[];
+  resourceOptions: ResourceOptions;
+  resourceFilters: ResourceFilters;
   scenario: FallScenario | null;
   analytics: ClassroomAnalytics;
   rules: EvaluationRulesResponse["rules"];
@@ -328,6 +383,8 @@ interface ViewProps {
     value: Omit<CaseFilters, "category">[Key] | undefined
   ) => void;
   resetCaseFilters: () => void;
+  updateResourceFilter: <Key extends keyof ResourceFilters>(key: Key, value: ResourceFilters[Key] | undefined) => void;
+  resetResourceFilters: () => void;
   handleCaseFileImport: (file: File) => Promise<void>;
   setActiveStepIndex: (index: number) => void;
   restartSimulation: () => void;
@@ -496,6 +553,8 @@ function ResourcesPage(props: ViewProps) {
             <Video size={42} />
             <strong>{active?.title ?? "请选择教学资源"}</strong>
             <span>{active ? `${resourceTypeLabels[active.type]} · ${active.bodyPart} · ${difficultyLabels[active.difficulty]}` : "支持接入正式视频地址"}</span>
+            {active ? <small>适用：{active.audience} · 器械：{active.equipment}</small> : null}
+            {active?.mediaUrl ? <small>视频地址：{active.mediaUrl}</small> : null}
           </div>
           <div className="two-column-notes">
             <InfoList title="操作要点" items={active?.keyPoints ?? []} />
@@ -602,14 +661,68 @@ function CaseLibraryPanel({
 
 function ResourceLibraryPanel({
   compact = false,
+  resourceFilters,
+  resourceOptions,
   resources,
+  resetResourceFilters,
   selectedResource,
-  setSelectedResource
+  setSelectedResource,
+  updateResourceFilter
 }: ViewProps & { compact?: boolean }) {
   const visibleResources = compact ? resources.slice(0, 4) : resources;
 
   return (
     <Panel icon={<BookOpen size={20} />} title="测评方法库 / 动作库">
+      {!compact ? (
+        <div className="filter-stack resource-filters">
+          <div className="search-field">
+            <Search size={16} />
+            <input
+              onChange={(event) => updateResourceFilter("keyword", event.target.value || undefined)}
+              placeholder="搜索方法、动作、要点"
+              type="search"
+              value={resourceFilters.keyword ?? ""}
+            />
+          </div>
+          <FilterTagGroup
+            activeValue={resourceFilters.type}
+            label="资源种类"
+            options={resourceOptions.types.map((type) => ({ label: resourceTypeLabels[type], value: type }))}
+            onSelect={(value) => updateResourceFilter("type", value as ResourceFilters["type"])}
+          />
+          <FilterTagGroup
+            activeValue={resourceFilters.bodyPart}
+            label="训练部位"
+            options={resourceOptions.bodyParts.map((bodyPart) => ({ label: bodyPart, value: bodyPart }))}
+            onSelect={(value) => updateResourceFilter("bodyPart", value)}
+          />
+          <FilterTagGroup
+            activeValue={resourceFilters.difficulty}
+            label="难度"
+            options={resourceOptions.difficulties.map((difficulty) => ({
+              label: difficultyLabels[difficulty],
+              value: difficulty
+            }))}
+            onSelect={(value) => updateResourceFilter("difficulty", value as ResourceFilters["difficulty"])}
+          />
+          <FilterTagGroup
+            activeValue={resourceFilters.audience}
+            label="适用人群"
+            options={resourceOptions.audiences.map((audience) => ({ label: audience, value: audience }))}
+            onSelect={(value) => updateResourceFilter("audience", value)}
+          />
+          <FilterTagGroup
+            activeValue={resourceFilters.equipment}
+            label="器械"
+            options={resourceOptions.equipment.map((equipment) => ({ label: equipment, value: equipment }))}
+            onSelect={(value) => updateResourceFilter("equipment", value)}
+          />
+          <div className="filter-actions">
+            <span>资源匹配：{resources.length}项</span>
+            <button onClick={resetResourceFilters} type="button">清空筛选</button>
+          </div>
+        </div>
+      ) : null}
       <div className={compact ? "resource-grid" : "resource-grid expanded"}>
         {visibleResources.map((item) => (
           <button className="resource-item" key={item.id} onClick={() => setSelectedResource(item)} type="button">
@@ -621,6 +734,7 @@ function ResourceLibraryPanel({
           </button>
         ))}
       </div>
+      {!visibleResources.length ? <div className="empty-state">暂无匹配资源</div> : null}
       {selectedResource ? <div className="selection-note">操作要点：{selectedResource.keyPoints.join("、")}</div> : null}
     </Panel>
   );
