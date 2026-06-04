@@ -22,6 +22,45 @@ describe("platform API", () => {
     expect(response.body.items.every((item: { diseases: string[] }) => item.diseases.includes("高血压"))).toBe(true);
   });
 
+  it("imports cases in batch and returns them through multi-condition filters", async () => {
+    const imported = await request(app)
+      .post("/api/cases/import")
+      .send({
+        items: [
+          {
+            id: "case-imported-001",
+            category: "subhealthy",
+            name: "导入肩颈疼痛案例",
+            gender: "female",
+            ageRange: "60-70",
+            condition: "亚健康",
+            diseases: ["肩周炎"],
+            tags: ["肩颈", "课堂导入"],
+            summary: "从批量导入进入案例库"
+          }
+        ]
+      })
+      .expect(201);
+
+    expect(imported.body.importedCount).toBe(1);
+    expect(imported.body.total).toBeGreaterThan(6);
+
+    const filtered = await request(app)
+      .get("/api/cases")
+      .query({
+        category: "subhealthy",
+        gender: "female",
+        ageRange: "60-70",
+        disease: "肩周炎",
+        tag: "课堂导入",
+        keyword: "肩颈"
+      })
+      .expect(200);
+
+    expect(filtered.body.items).toHaveLength(1);
+    expect(filtered.body.items[0].id).toBe("case-imported-001");
+  });
+
   it("filters method and action resources", async () => {
     const response = await request(app)
       .get("/api/resources")

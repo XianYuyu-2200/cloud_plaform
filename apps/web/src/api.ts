@@ -1,4 +1,4 @@
-import type { CaseCategory, CaseRecord, LearningResource } from "@smart-care/shared";
+import type { CaseCategory, CaseFilters, CaseRecord, Gender, LearningResource } from "@smart-care/shared";
 
 export interface Overview {
   className: string;
@@ -39,6 +39,15 @@ export interface FallScenario {
   }>;
 }
 
+export interface CaseOptions {
+  categories: CaseCategory[];
+  genders: Gender[];
+  ageRanges: string[];
+  diseases: string[];
+  tags: string[];
+  conditions: string[];
+}
+
 async function getJson<T>(url: string): Promise<T> {
   const response = await fetch(url);
   if (!response.ok) {
@@ -51,11 +60,37 @@ export function getOverview() {
   return getJson<Overview>("/api/overview");
 }
 
-export function getCases(filters: { category?: CaseCategory } = {}) {
+export function getCases(filters: CaseFilters = {}) {
   const params = new URLSearchParams();
   if (filters.category) params.set("category", filters.category);
+  if (filters.gender) params.set("gender", filters.gender);
+  if (filters.ageRange) params.set("ageRange", filters.ageRange);
+  if (filters.disease) params.set("disease", filters.disease);
+  if (filters.tag) params.set("tag", filters.tag);
+  if (filters.keyword) params.set("keyword", filters.keyword);
   const query = params.toString();
   return getJson<{ items: CaseRecord[] }>(`/api/cases${query ? `?${query}` : ""}`);
+}
+
+export function getCaseOptions() {
+  return getJson<CaseOptions>("/api/cases/options");
+}
+
+export async function importCases(items: CaseRecord[]) {
+  const response = await fetch("/api/cases/import", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ items })
+  });
+  if (!response.ok) {
+    throw new Error(`Request failed: ${response.status}`);
+  }
+  return response.json() as Promise<{
+    importedCount: number;
+    rejectedCount: number;
+    total: number;
+    items: CaseRecord[];
+  }>;
 }
 
 export function getResources() {

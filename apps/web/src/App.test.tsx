@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
@@ -15,6 +15,21 @@ vi.stubGlobal(
 
     if (url.endsWith("/api/simulations") && init?.method === "POST") {
       return json({ sessionId: "session-test", scenarioId: "fall-response" });
+    }
+
+    if (url.endsWith("/api/cases/import") && init?.method === "POST") {
+      return json({ importedCount: 1, total: 7, items: [] });
+    }
+
+    if (url.endsWith("/api/cases/options")) {
+      return json({
+        categories: ["healthy", "subhealthy", "chronic"],
+        genders: ["male", "female"],
+        ageRanges: ["60-70", "75-85"],
+        diseases: ["高血压", "糖尿病"],
+        tags: ["跌倒", "应急"],
+        conditions: ["健康", "亚健康", "慢性病"]
+      });
     }
 
     if (url.includes("/api/simulations/session-test/steps/environment") && init?.method === "POST") {
@@ -44,6 +59,9 @@ vi.stubGlobal(
             name: "高血压跌倒风险",
             summary: "适合应急处置",
             category: "chronic",
+            gender: "male",
+            ageRange: "75-85",
+            condition: "慢性病",
             diseases: ["高血压"],
             tags: ["跌倒"]
           }
@@ -150,5 +168,56 @@ describe("App", () => {
 
     await userEvent.click(await screen.findByRole("button", { name: "评价体系" }));
     expect(await screen.findByText("评价维度配置")).toBeInTheDocument();
+  });
+
+  it("filters the case library with multiple conditions", async () => {
+    const fetchMock = vi.mocked(fetch);
+    render(<App />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "案例库" }));
+    await screen.findByText("案例筛选结果");
+
+    await userEvent.click(await screen.findByRole("button", { name: "男" }));
+    await userEvent.click(await screen.findByRole("button", { name: "75-85" }));
+    await userEvent.click(await screen.findByRole("button", { name: "高血压" }));
+    await userEvent.click(await screen.findByRole("button", { name: "跌倒" }));
+
+    await waitFor(() => {
+      expect(
+        fetchMock.mock.calls.some(([input]) => {
+          const url = String(input);
+          return (
+            url.includes("/api/cases?") &&
+            url.includes("category=chronic") &&
+            url.includes("gender=male") &&
+            url.includes("ageRange=75-85") &&
+            url.includes("disease=%E9%AB%98%E8%A1%80%E5%8E%8B") &&
+            url.includes("tag=%E8%B7%8C%E5%80%92")
+          );
+        })
+      ).toBe(true);
+    });
+  });
+
+  it("uploads a batch case file and reports import feedback", async () => {
+    const fetchMock = vi.mocked(fetch);
+    render(<App />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "案例库" }));
+    const file = new File(
+      [
+        "category,name,gender,ageRange,condition,diseases,tags,summary\n" +
+          "subhealthy,导入肩颈案例,female,60-70,亚健康,肩周炎,课堂导入|肩颈,批量导入案例"
+      ],
+      "cases.csv",
+      { type: "text/csv" }
+    );
+
+    await userEvent.upload(await screen.findByLabelText("批量导入案例"), file);
+
+    expect(await screen.findByText("导入成功：1条")).toBeInTheDocument();
+    expect(
+      fetchMock.mock.calls.some(([input, init]) => String(input).endsWith("/api/cases/import") && init?.method === "POST")
+    ).toBe(true);
   });
 });

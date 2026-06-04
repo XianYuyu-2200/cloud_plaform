@@ -27,6 +27,7 @@ export interface CaseFilters {
   ageRange?: string;
   disease?: string;
   tag?: string;
+  keyword?: string;
 }
 
 export interface LearningResource {

@@ -671,6 +671,82 @@ button.score-bar:hover {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.import-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 12px;
+  border: 1px solid rgba(91, 188, 255, .32);
+  background: rgba(5, 20, 42, .56);
+}
+
+.import-card strong,
+.import-card span {
+  display: block;
+}
+
+.import-card span {
+  margin-top: 5px;
+  color: #a9cae5;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.import-card input[type="file"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.upload-button,
+.filter-actions button {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 13px;
+  color: #eafdff;
+  border: 1px solid rgba(89, 203, 255, .72);
+  background: linear-gradient(180deg, rgba(42, 149, 239, .86), rgba(20, 75, 139, .78));
+  box-shadow: 0 0 12px rgba(63, 185, 255, .28);
+  cursor: pointer;
+}
+
+.keyword-field {
+  display: grid;
+  grid-template-columns: 70px 1fr;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 9px 12px;
+  border: 1px solid rgba(91, 188, 255, .3);
+  background: rgba(5, 20, 42, .52);
+}
+
+.keyword-field span {
+  color: #eafdff;
+  font-weight: 700;
+}
+
+.keyword-field input {
+  min-width: 0;
+  height: 32px;
+  padding: 0 10px;
+  color: #eafdff;
+  border: 1px solid rgba(91, 188, 255, .36);
+  background: rgba(7, 28, 57, .75);
+  outline: none;
+}
+
+.keyword-field input:focus {
+  border-color: rgba(89, 203, 255, .9);
+  box-shadow: 0 0 12px rgba(63, 185, 255, .28);
+}
+
 .tag-group {
   min-height: 102px;
   padding: 12px;
@@ -704,6 +780,22 @@ button.score-bar:hover {
   color: #fff;
   border-color: rgba(89, 203, 255, .86);
   background: rgba(22, 84, 148, .86);
+}
+
+.tag-group button.active {
+  color: #08213a;
+  border-color: rgba(146, 242, 108, .9);
+  background: linear-gradient(90deg, #2de1ff, #8bf06b);
+}
+
+.filter-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  color: #a9cae5;
+  font-size: 13px;
 }
 
 .detail-card {

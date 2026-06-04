@@ -11,21 +11,25 @@ import {
   Video
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
-import type { CaseCategory, CaseRecord, LearningResource } from "@smart-care/shared";
+import type { CaseCategory, CaseFilters, CaseRecord, Gender, LearningResource } from "@smart-care/shared";
 import {
   createSimulation,
   getAnalytics,
+  getCaseOptions,
   getCases,
   getEvaluationRules,
   getFallScenario,
   getOverview,
   getResources,
+  importCases,
   submitSimulationStep,
+  type CaseOptions,
   type ClassroomAnalytics,
   type EvaluationRulesResponse,
   type FallScenario,
   type Overview
 } from "./api";
+import { parseCaseImportText } from "./caseImport";
 import "./styles.css";
 
 type Page = "cockpit" | "cases" | "simulation" | "resources" | "analytics" | "evaluation";
@@ -69,10 +73,37 @@ function defaultAnalytics(): ClassroomAnalytics {
   };
 }
 
+function defaultCaseOptions(): CaseOptions {
+  return {
+    categories: ["healthy", "subhealthy", "chronic"],
+    genders: ["female", "male"],
+    ageRanges: [],
+    diseases: [],
+    tags: [],
+    conditions: []
+  };
+}
+
+function readFileText(file: File): Promise<string> {
+  if (typeof file.text === "function") {
+    return file.text();
+  }
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result ?? ""));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsText(file);
+  });
+}
+
 export default function App() {
   const [page, setPage] = useState<Page>("cockpit");
   const [overview, setOverview] = useState<Overview | null>(null);
   const [cases, setCases] = useState<CaseRecord[]>([]);
+  const [caseOptions, setCaseOptions] = useState<CaseOptions>(defaultCaseOptions);
+  const [caseFilters, setCaseFilters] = useState<Omit<CaseFilters, "category">>({});
+  const [caseImportStatus, setCaseImportStatus] = useState<string | null>(null);
   const [resources, setResources] = useState<LearningResource[]>([]);
   const [scenario, setScenario] = useState<FallScenario | null>(null);
   const [analytics, setAnalytics] = useState<ClassroomAnalytics>(defaultAnalytics);
@@ -88,13 +119,17 @@ export default function App() {
   useEffect(() => {
     void Promise.all([
       getOverview().then(setOverview),
-      getCases({ category: activeCategory }).then((data) => setCases(data.items)),
       getResources().then((data) => setResources(data.items)),
       getFallScenario().then(setScenario),
       getAnalytics().then(setAnalytics),
-      getEvaluationRules().then((data) => setRules(data.rules))
+      getEvaluationRules().then((data) => setRules(data.rules)),
+      getCaseOptions().then(setCaseOptions)
     ]);
-  }, [activeCategory]);
+  }, []);
+
+  useEffect(() => {
+    void getCases({ category: activeCategory, ...caseFilters }).then((data) => setCases(data.items));
+  }, [activeCategory, caseFilters.ageRange, caseFilters.disease, caseFilters.gender, caseFilters.keyword, caseFilters.tag]);
 
   async function handleSimulationOption(stepId: string, optionId: string) {
     if (!scenario) return;
@@ -108,9 +143,46 @@ export default function App() {
     setStepResult({ score: result.stepScore, feedback: result.feedback });
   }
 
+  function updateCaseFilter<Key extends keyof Omit<CaseFilters, "category">>(
+    key: Key,
+    value: Omit<CaseFilters, "category">[Key] | undefined
+  ) {
+    setCaseFilters((current) => ({
+      ...current,
+      [key]: current[key] === value ? undefined : value
+    }));
+  }
+
+  function resetCaseFilters() {
+    setCaseFilters({});
+    setActiveCategory("chronic");
+  }
+
+  async function handleCaseFileImport(file: File) {
+    const importedItems = parseCaseImportText(await readFileText(file), file.name);
+    if (!importedItems.length) {
+      setCaseImportStatus("未识别到有效案例，请检查表头和必填字段。");
+      return;
+    }
+
+    const result = await importCases(importedItems);
+    setCaseImportStatus(`导入成功：${result.importedCount}条`);
+    const [caseData, optionData, overviewData] = await Promise.all([
+      getCases({ category: activeCategory, ...caseFilters }),
+      getCaseOptions(),
+      getOverview()
+    ]);
+    setCases(caseData.items);
+    setCaseOptions(optionData);
+    setOverview(overviewData);
+  }
+
   const shellProps = {
     overview,
     cases,
+    caseOptions,
+    caseFilters,
+    caseImportStatus,
     resources,
     scenario,
     analytics,
@@ -126,6 +198,9 @@ export default function App() {
     setSelectedResource,
     setSelectedStudent,
     setSelectedDimension,
+    updateCaseFilter,
+    resetCaseFilters,
+    handleCaseFileImport,
     handleSimulationOption
   };
 
@@ -171,6 +246,9 @@ export default function App() {
 interface ViewProps {
   overview: Overview | null;
   cases: CaseRecord[];
+  caseOptions: CaseOptions;
+  caseFilters: Omit<CaseFilters, "category">;
+  caseImportStatus: string | null;
   resources: LearningResource[];
   scenario: FallScenario | null;
   analytics: ClassroomAnalytics;
@@ -186,6 +264,12 @@ interface ViewProps {
   setSelectedResource: (item: LearningResource) => void;
   setSelectedStudent: (item: ClassroomAnalytics["students"][number]) => void;
   setSelectedDimension: (item: ClassroomAnalytics["dimensions"][number]) => void;
+  updateCaseFilter: <Key extends keyof Omit<CaseFilters, "category">>(
+    key: Key,
+    value: Omit<CaseFilters, "category">[Key] | undefined
+  ) => void;
+  resetCaseFilters: () => void;
+  handleCaseFileImport: (file: File) => Promise<void>;
   handleSimulationOption: (stepId: string, optionId: string) => Promise<void>;
 }
 
@@ -209,6 +293,7 @@ function CockpitView(props: ViewProps) {
 
 function CasesPage(props: ViewProps) {
   const active = props.selectedCase ?? props.cases[0] ?? null;
+  const caseTotalText = `当前结果：${props.cases.length}个案例`;
 
   return (
     <ModulePage
@@ -220,11 +305,69 @@ function CasesPage(props: ViewProps) {
       <div className="module-layout">
         <CaseLibraryPanel {...props} />
         <Panel icon={<Search size={20} />} title="标签筛选">
+          <div className="import-card">
+            <div>
+              <strong>批量导入案例</strong>
+              <span>支持 CSV / JSON，字段包含分类、性别、年龄、疾病、标签、摘要。</span>
+            </div>
+            <label className="upload-button" htmlFor="case-import-file">批量导入案例</label>
+            <input
+              accept=".csv,.json"
+              id="case-import-file"
+              onChange={(event) => {
+                const file = event.currentTarget.files?.[0];
+                if (file) void props.handleCaseFileImport(file);
+                event.currentTarget.value = "";
+              }}
+              type="file"
+            />
+          </div>
+          {props.caseImportStatus ? <div className="selection-note">{props.caseImportStatus}</div> : null}
+          <label className="keyword-field">
+            <span>关键词</span>
+            <input
+              aria-label="案例关键词"
+              onChange={(event) => props.updateCaseFilter("keyword", event.target.value || undefined)}
+              placeholder="输入案例名称、疾病或标签"
+              type="search"
+              value={props.caseFilters.keyword ?? ""}
+            />
+          </label>
           <div className="filter-board">
-            <TagGroup label="性别" values={["女", "男", "不限"]} />
-            <TagGroup label="年龄" values={["55-65", "65-75", "75-85"]} />
-            <TagGroup label="身体状况" values={categoryLabels.map((item) => item.label)} />
-            <TagGroup label="疾病种类" values={["高血压", "糖尿病", "跌倒风险", "肩颈不适"]} />
+            <FilterTagGroup
+              activeValue={props.caseFilters.gender}
+              label="性别"
+              options={props.caseOptions.genders.map((gender) => ({ label: genderLabels[gender], value: gender }))}
+              onSelect={(value) => props.updateCaseFilter("gender", value as Gender)}
+            />
+            <FilterTagGroup
+              activeValue={props.caseFilters.ageRange}
+              label="年龄"
+              options={props.caseOptions.ageRanges.map((ageRange) => ({ label: ageRange, value: ageRange }))}
+              onSelect={(value) => props.updateCaseFilter("ageRange", value)}
+            />
+            <FilterTagGroup
+              activeValue={props.activeCategory}
+              label="身体状况"
+              options={categoryLabels.map((item) => ({ label: item.label, value: item.value }))}
+              onSelect={(value) => props.setActiveCategory(value as CaseCategory)}
+            />
+            <FilterTagGroup
+              activeValue={props.caseFilters.disease}
+              label="疾病种类"
+              options={props.caseOptions.diseases.map((disease) => ({ label: disease, value: disease }))}
+              onSelect={(value) => props.updateCaseFilter("disease", value)}
+            />
+            <FilterTagGroup
+              activeValue={props.caseFilters.tag}
+              label="课堂标签"
+              options={props.caseOptions.tags.map((tag) => ({ label: tag, value: tag }))}
+              onSelect={(value) => props.updateCaseFilter("tag", value)}
+            />
+          </div>
+          <div className="filter-actions">
+            <span>{caseTotalText}</span>
+            <button onClick={props.resetCaseFilters} type="button">清空筛选</button>
           </div>
           <div className="detail-card">
             <strong>{active?.name ?? "等待选择案例"}</strong>
@@ -577,13 +720,30 @@ function Metric({ label, value }: { label: string; value: number }) {
   );
 }
 
-function TagGroup({ label, values }: { label: string; values: string[] }) {
+function FilterTagGroup({
+  activeValue,
+  label,
+  onSelect,
+  options
+}: {
+  activeValue?: string;
+  label: string;
+  onSelect: (value: string) => void;
+  options: Array<{ label: string; value: string }>;
+}) {
   return (
     <div className="tag-group">
       <strong>{label}</strong>
       <div>
-        {values.map((value) => (
-          <button key={value} type="button">{value}</button>
+        {options.map((option) => (
+          <button
+            className={activeValue === option.value ? "active" : ""}
+            key={option.value}
+            onClick={() => onSelect(option.value)}
+            type="button"
+          >
+            {option.label}
+          </button>
         ))}
       </div>
     </div>

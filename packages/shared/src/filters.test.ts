@@ -65,6 +65,15 @@ describe("filterCases", () => {
       })
     ).toEqual([cases[1]]);
   });
+
+  it("filters cases by tag and keyword across searchable fields", () => {
+    expect(
+      filterCases(cases, {
+        tag: "应急",
+        keyword: "跌倒"
+      })
+    ).toEqual([cases[1]]);
+  });
 });
 
 describe("filterResources", () => {
