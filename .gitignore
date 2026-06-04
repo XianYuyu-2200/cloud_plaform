@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build output
+dist/
+**/dist/
+
+# Test and tool caches
+coverage/
+.vite/
+**/.vite/
+.turbo/
+.cache/
+
+# Local environment
+.env
+.env.*
+!.env.example
+
+# Local Codex / planning scratch
+.superpowers/
+
+# Generated screenshots and verification artifacts
+artifacts/
+final-platform-screenshot.png
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

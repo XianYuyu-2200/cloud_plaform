@@ -1,0 +1,23 @@
+{
+  "name": "smart-care-teaching-platform",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm-run-all --parallel dev:api dev:web",
+    "dev:api": "npm --workspace @smart-care/api run dev",
+    "dev:web": "npm --workspace @smart-care/web run dev",
+    "build": "npm --workspaces run build",
+    "test": "npm --workspaces run test",
+    "test:run": "npm --workspaces run test:run"
+  },
+  "devDependencies": {
+    "npm-run-all": "^4.1.5",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.0"
+  }
+}
