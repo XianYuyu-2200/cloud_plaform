@@ -109,5 +109,7 @@ describe("platform API", () => {
     expect(analytics.body.weakSteps[0].step).toContain("呼救");
     expect(analytics.body.recommendations[0].title).toContain("跌倒");
     expect(rules.body.rules.map((rule: { label: string }) => rule.label)).toContain("安全");
+    expect(rules.body.levels[0].name).toBe("优秀");
+    expect(rules.body.deductions[0].mistake).toContain("未先排除危险源");
   });
 });

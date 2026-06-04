@@ -141,6 +141,40 @@ export const evaluationRules: EvaluationRule[] = [
   { dimension: "communication", label: "沟通", weight: 0.12 }
 ];
 
+export const evaluationLevels = [
+  { name: "优秀", minScore: 90, description: "流程完整，关键风险判断准确，可作为课堂示范。" },
+  { name: "良好", minScore: 80, description: "主要步骤完成，存在少量细节遗漏。" },
+  { name: "合格", minScore: 70, description: "能完成基础处置，但需要教师提醒关键节点。" },
+  { name: "待提升", minScore: 0, description: "关键步骤缺失，需要课后复训和个别辅导。" }
+];
+
+export const deductionRules = [
+  {
+    id: "deduct-environment",
+    step: "判断环境危险源",
+    dimension: "safety",
+    mistake: "未先排除危险源",
+    deduction: 16,
+    suggestion: "进入处置前先观察湿滑、障碍物、电源等二次风险。"
+  },
+  {
+    id: "deduct-consciousness",
+    step: "判断意识状态",
+    dimension: "quality",
+    mistake: "跳过意识判断",
+    deduction: 16,
+    suggestion: "通过呼唤、观察反应判断意识状态后再进入下一步。"
+  },
+  {
+    id: "deduct-transfer",
+    step: "呼救与转运决策",
+    dimension: "timeliness",
+    mistake: "延误呼救或等待课堂结束",
+    deduction: 18,
+    suggestion: "疑似骨折、出血或意识异常时及时呼叫急救。"
+  }
+];
+
 export const fallScenario: SimulationScenario = {
   id: "fall-response",
   title: "老年人跌倒应急处置",

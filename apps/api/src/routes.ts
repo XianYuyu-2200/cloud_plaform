@@ -1,7 +1,7 @@
 import { Router } from "express";
 import type { CaseCategory, CaseRecord, Difficulty, Gender, ResourceType } from "@smart-care/shared";
 import { filterCases, filterResources, scoreSimulation, summarizeEvaluation } from "@smart-care/shared";
-import { analytics, cases, evaluationRules, fallScenario, resources, students } from "./seed";
+import { analytics, cases, deductionRules, evaluationLevels, evaluationRules, fallScenario, resources, students } from "./seed";
 
 interface SimulationSessionState {
   scenarioId: string;
@@ -226,7 +226,7 @@ export function createRoutes() {
   });
 
   router.get("/evaluations/rules", (_request, response) => {
-    response.json({ rules: evaluationRules });
+    response.json({ rules: evaluationRules, levels: evaluationLevels, deductions: deductionRules });
   });
 
   router.post("/import/cases/preview", (request, response) => {

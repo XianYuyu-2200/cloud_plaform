@@ -43,6 +43,15 @@ export interface ClassroomAnalytics {
 
 export interface EvaluationRulesResponse {
   rules: Array<{ dimension: string; label: string; weight: number }>;
+  levels: Array<{ name: string; minScore: number; description: string }>;
+  deductions: Array<{
+    id: string;
+    step: string;
+    dimension: string;
+    mistake: string;
+    deduction: number;
+    suggestion: string;
+  }>;
 }
 
 export interface FallScenario {

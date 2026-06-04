@@ -144,6 +144,8 @@ export default function App() {
   const [scenario, setScenario] = useState<FallScenario | null>(null);
   const [analytics, setAnalytics] = useState<ClassroomAnalytics>(defaultAnalytics);
   const [rules, setRules] = useState<EvaluationRulesResponse["rules"]>([]);
+  const [evaluationLevels, setEvaluationLevels] = useState<EvaluationRulesResponse["levels"]>([]);
+  const [deductionRules, setDeductionRules] = useState<EvaluationRulesResponse["deductions"]>([]);
   const [activeCategory, setActiveCategory] = useState<CaseCategory>("chronic");
   const [simulationSessionId, setSimulationSessionId] = useState<string | null>(null);
   const [activeStepIndex, setActiveStepIndex] = useState(0);
@@ -160,7 +162,11 @@ export default function App() {
       getOverview().then(setOverview),
       getFallScenario().then(setScenario),
       getAnalytics().then(setAnalytics),
-      getEvaluationRules().then((data) => setRules(data.rules)),
+      getEvaluationRules().then((data) => {
+        setRules(data.rules);
+        setEvaluationLevels(data.levels ?? []);
+        setDeductionRules(data.deductions ?? []);
+      }),
       getCaseOptions().then(setCaseOptions),
       getResourceOptions().then(setResourceOptions)
     ]);
@@ -292,6 +298,8 @@ export default function App() {
     scenario,
     analytics,
     rules,
+    evaluationLevels,
+    deductionRules,
     activeCategory,
     activeStepIndex,
     stepResult,
@@ -368,6 +376,8 @@ interface ViewProps {
   scenario: FallScenario | null;
   analytics: ClassroomAnalytics;
   rules: EvaluationRulesResponse["rules"];
+  evaluationLevels: EvaluationRulesResponse["levels"];
+  deductionRules: EvaluationRulesResponse["deductions"];
   activeCategory: CaseCategory;
   activeStepIndex: number;
   stepResult: StepResultState | null;
@@ -642,6 +652,8 @@ function AnalyticsPage(props: ViewProps) {
 }
 
 function EvaluationPage(props: ViewProps) {
+  const firstRule = props.rules[0] ?? null;
+
   return (
     <ModulePage
       eyebrow="评价体系"
@@ -652,12 +664,35 @@ function EvaluationPage(props: ViewProps) {
       <div className="module-layout">
         <EvaluationPanel {...props} />
         <Panel icon={<ShieldCheck size={20} />} title="权重设置">
+          {firstRule ? (
+            <div className="evaluation-summary">
+              <span>{firstRule.label}权重：{Math.round(firstRule.weight * 100)}%</span>
+              <strong>评分总则</strong>
+              <small>分步评分结果按权重汇总为综合评价。</small>
+            </div>
+          ) : null}
           <div className="rule-grid">
             {props.rules.map((rule) => (
               <div className="rule-item" key={rule.dimension}>
                 <span>{rule.label}</span>
                 <div><i style={{ width: `${rule.weight * 100}%` }} /></div>
                 <strong>{Math.round(rule.weight * 100)}%</strong>
+              </div>
+            ))}
+          </div>
+          <div className="level-grid">
+            {props.evaluationLevels.map((level) => (
+              <div className="level-item" key={level.name}>
+                <strong>评分等级：{level.name} {level.minScore}分及以上</strong>
+                <span>{level.description}</span>
+              </div>
+            ))}
+          </div>
+          <div className="deduction-list">
+            {props.deductionRules.map((rule) => (
+              <div className="deduction-item" key={rule.id}>
+                <strong>扣分规则：{rule.mistake} -{rule.deduction}分</strong>
+                <span>{rule.step} · {rule.suggestion}</span>
               </div>
             ))}
           </div>

@@ -190,7 +190,20 @@ vi.stubGlobal(
     }
 
     if (url.includes("/api/evaluations")) {
-      return json({ rules: [{ dimension: "safety", label: "安全", weight: 0.3 }] });
+      return json({
+        rules: [{ dimension: "safety", label: "安全", weight: 0.3 }],
+        levels: [{ name: "优秀", minScore: 90, description: "流程完整，关键风险判断准确。" }],
+        deductions: [
+          {
+            id: "deduct-environment",
+            step: "判断环境危险源",
+            dimension: "safety",
+            mistake: "未先排除危险源",
+            deduction: 16,
+            suggestion: "先观察湿滑、障碍物等二次风险。"
+          }
+        ]
+      });
     }
 
     return json({
@@ -358,6 +371,19 @@ describe("App", () => {
 
     await userEvent.click(await screen.findByRole("button", { name: "沈峥宇 1100" }));
     expect(await screen.findByText("最近实训：跌倒处置流程 90分")).toBeInTheDocument();
+  });
+
+  it("shows evaluation levels and deduction rules", async () => {
+    render(<App />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "评价体系" }));
+
+    expect(await screen.findByText("安全权重：30%")).toBeInTheDocument();
+    expect(await screen.findByText("评分等级：优秀 90分及以上")).toBeInTheDocument();
+    expect(await screen.findByText("扣分规则：未先排除危险源 -16分")).toBeInTheDocument();
+
+    await userEvent.click(await screen.findByRole("button", { name: "安全 92" }));
+    expect(await screen.findByText("当前评价维度：安全 92分")).toBeInTheDocument();
   });
 
   it("uploads a batch case file and reports import feedback", async () => {
