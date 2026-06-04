@@ -346,6 +346,10 @@ button {
   box-shadow: 0 0 14px rgba(63, 185, 255, .38), inset 0 0 18px rgba(162, 231, 255, .12);
 }
 
+.scenario-tabs button.completed {
+  border-color: rgba(146, 242, 108, .76);
+}
+
 .case-list,
 .resource-grid,
 .student-list,
@@ -430,6 +434,23 @@ button.score-bar:hover {
   font-size: 12px;
 }
 
+.inline-action {
+  width: fit-content;
+  min-height: 34px;
+  margin-top: 10px;
+  padding: 0 14px;
+  border: 1px solid rgba(45, 225, 255, .62);
+  color: #eafdff;
+  background: rgba(15, 74, 124, .64);
+  box-shadow: 0 0 16px rgba(45, 225, 255, .16);
+  cursor: pointer;
+}
+
+.inline-action:hover {
+  border-color: rgba(139, 240, 107, .75);
+  background: rgba(22, 96, 116, .78);
+}
+
 .resource-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -447,6 +468,40 @@ button.score-bar:hover {
 
 .simulation-panel {
   min-height: 0;
+}
+
+.scenario-case {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  color: #eafdff;
+  border-left: 3px solid #92f26c;
+  background: rgba(4, 22, 44, .68);
+  font-size: 13px;
+}
+
+.simulation-progress {
+  display: grid;
+  grid-template-columns: 104px 1fr;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  color: #a9cae5;
+  font-size: 13px;
+}
+
+.simulation-progress div {
+  height: 8px;
+  background: rgba(255, 255, 255, .15);
+}
+
+.simulation-progress i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #2de1ff, #8bf06b);
+  box-shadow: 0 0 10px rgba(50, 225, 255, .4);
 }
 
 .simulation-body {
@@ -535,6 +590,15 @@ button.score-bar:hover {
   text-align: right;
 }
 
+.step-row.active {
+  border-color: rgba(89, 203, 255, .86);
+  background: rgba(16, 50, 92, .78);
+}
+
+.step-row.completed b {
+  background: #92f26c;
+}
+
 .option-bank {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -559,6 +623,52 @@ button.score-bar:hover {
 .feedback-box span {
   color: #bfe0f2;
   font-size: 13px;
+}
+
+.simulation-report {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px solid rgba(146, 242, 108, .45);
+  background: rgba(5, 34, 42, .62);
+}
+
+.simulation-report > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.simulation-report strong {
+  color: #92f26c;
+}
+
+.simulation-report span {
+  color: #c0e0f2;
+}
+
+.report-dimensions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.report-dimensions span {
+  padding: 6px 9px;
+  border: 1px solid rgba(91, 188, 255, .32);
+  background: rgba(5, 20, 42, .58);
+}
+
+.simulation-report button {
+  justify-self: start;
+  min-height: 32px;
+  padding: 0 12px;
+  color: #eafdff;
+  border: 1px solid rgba(91, 188, 255, .46);
+  background: rgba(8, 27, 55, .76);
+  cursor: pointer;
 }
 
 .metric-row {

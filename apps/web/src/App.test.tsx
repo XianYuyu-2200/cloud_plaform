@@ -39,7 +39,48 @@ vi.stubGlobal(
         totalScore: 20,
         feedback: "能先排除湿滑、障碍物等危险源。",
         completedSteps: 1,
-        totalSteps: 5
+        totalSteps: 2
+      });
+    }
+
+    if (url.includes("/api/simulations/session-test/steps/consciousness") && init?.method === "POST") {
+      return json({
+        stepId: "consciousness",
+        stepScore: 18,
+        totalScore: 38,
+        feedback: "能通过呼唤和观察判断意识状态。",
+        completedSteps: 2,
+        totalSteps: 2
+      });
+    }
+
+    if (url.endsWith("/api/simulations/session-test/report")) {
+      return json({
+        totalScore: 38,
+        steps: [
+          {
+            stepId: "environment",
+            title: "判断环境危险源",
+            dimension: "safety",
+            optionId: "check-danger",
+            optionLabel: "先排除危险源",
+            score: 20,
+            feedback: "能先排除湿滑、障碍物等危险源。"
+          },
+          {
+            stepId: "consciousness",
+            title: "判断意识状态",
+            dimension: "quality",
+            optionId: "ask-response",
+            optionLabel: "呼唤并观察意识反应",
+            score: 18,
+            feedback: "能通过呼唤和观察判断意识状态。"
+          }
+        ],
+        evaluation: [
+          { dimension: "safety", label: "安全", score: 20, weightedScore: 6 },
+          { dimension: "quality", label: "质量", score: 18, weightedScore: 3.96 }
+        ]
       });
     }
 
@@ -104,6 +145,11 @@ vi.stubGlobal(
           id: "environment",
           title: "判断环境危险源",
           options: [{ id: "check-danger", label: "先排除危险源", score: 20 }]
+        },
+        {
+          id: "consciousness",
+          title: "判断意识状态",
+          options: [{ id: "ask-response", label: "呼唤并观察意识反应", score: 18 }]
         }
       ]
     });
@@ -133,6 +179,19 @@ describe("App", () => {
 
     expect(await screen.findByText("本次得分：20")).toBeInTheDocument();
     expect(await screen.findByText("能先排除湿滑、障碍物等危险源。")).toBeInTheDocument();
+  });
+
+  it("completes multiple fall-response steps and displays a total report", async () => {
+    render(<App />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "应急实训" }));
+    await userEvent.click(await screen.findByRole("button", { name: "先排除危险源" }));
+    await userEvent.click(await screen.findByRole("button", { name: "呼唤并观察意识反应" }));
+
+    expect(await screen.findByText("实训总分：38")).toBeInTheDocument();
+    expect(await screen.findByText("已完成：2/2")).toBeInTheDocument();
+    expect(await screen.findByText("安全 20分")).toBeInTheDocument();
+    expect(await screen.findByText("质量 18分")).toBeInTheDocument();
   });
 
   it("opens details from case, resource, student, and evaluation cards", async () => {

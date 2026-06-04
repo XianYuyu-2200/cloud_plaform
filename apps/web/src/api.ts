@@ -39,6 +39,25 @@ export interface FallScenario {
   }>;
 }
 
+export interface SimulationReport {
+  totalScore: number;
+  steps: Array<{
+    stepId: string;
+    title: string;
+    dimension: string;
+    optionId: string;
+    optionLabel: string;
+    score: number;
+    feedback: string;
+  }>;
+  evaluation: Array<{
+    dimension: string;
+    label: string;
+    score: number;
+    weightedScore: number;
+  }>;
+}
+
 export interface CaseOptions {
   categories: CaseCategory[];
   genders: Gender[];
@@ -138,4 +157,8 @@ export async function submitSimulationStep(sessionId: string, stepId: string, op
     completedSteps: number;
     totalSteps: number;
   }>;
+}
+
+export function getSimulationReport(sessionId: string) {
+  return getJson<SimulationReport>(`/api/simulations/${sessionId}/report`);
 }

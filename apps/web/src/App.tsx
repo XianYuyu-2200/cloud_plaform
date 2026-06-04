@@ -21,13 +21,15 @@ import {
   getFallScenario,
   getOverview,
   getResources,
+  getSimulationReport,
   importCases,
   submitSimulationStep,
   type CaseOptions,
   type ClassroomAnalytics,
   type EvaluationRulesResponse,
   type FallScenario,
-  type Overview
+  type Overview,
+  type SimulationReport
 } from "./api";
 import { parseCaseImportText } from "./caseImport";
 import "./styles.css";
@@ -64,6 +66,15 @@ const navItems: Array<{ page: Page; label: string; icon: ReactNode }> = [
   { page: "analytics", label: "学情分析", icon: <BarChart3 size={16} /> },
   { page: "evaluation", label: "评价体系", icon: <ClipboardCheck size={16} /> }
 ];
+
+interface StepResultState {
+  stepId: string;
+  score: number;
+  feedback: string;
+  totalScore: number;
+  completedSteps: number;
+  totalSteps: number;
+}
 
 function defaultAnalytics(): ClassroomAnalytics {
   return {
@@ -110,7 +121,10 @@ export default function App() {
   const [rules, setRules] = useState<EvaluationRulesResponse["rules"]>([]);
   const [activeCategory, setActiveCategory] = useState<CaseCategory>("chronic");
   const [simulationSessionId, setSimulationSessionId] = useState<string | null>(null);
-  const [stepResult, setStepResult] = useState<{ score: number; feedback: string } | null>(null);
+  const [activeStepIndex, setActiveStepIndex] = useState(0);
+  const [stepResult, setStepResult] = useState<StepResultState | null>(null);
+  const [stepResults, setStepResults] = useState<Record<string, StepResultState>>({});
+  const [simulationReport, setSimulationReport] = useState<SimulationReport | null>(null);
   const [selectedCase, setSelectedCase] = useState<CaseRecord | null>(null);
   const [selectedResource, setSelectedResource] = useState<LearningResource | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<ClassroomAnalytics["students"][number] | null>(null);
@@ -140,7 +154,43 @@ export default function App() {
       setSimulationSessionId(sessionId);
     }
     const result = await submitSimulationStep(sessionId, stepId, optionId);
-    setStepResult({ score: result.stepScore, feedback: result.feedback });
+    const nextResult: StepResultState = {
+      stepId,
+      score: result.stepScore,
+      feedback: result.feedback,
+      totalScore: result.totalScore,
+      completedSteps: result.completedSteps,
+      totalSteps: result.totalSteps
+    };
+    setStepResult(nextResult);
+    setStepResults((current) => ({ ...current, [stepId]: nextResult }));
+
+    if (result.completedSteps >= result.totalSteps) {
+      const report = await getSimulationReport(sessionId);
+      setSimulationReport(report);
+      return;
+    }
+
+    const currentIndex = scenario.steps.findIndex((step) => step.id === stepId);
+    setActiveStepIndex(Math.min(currentIndex + 1, scenario.steps.length - 1));
+  }
+
+  function restartSimulation() {
+    setSimulationSessionId(null);
+    setActiveStepIndex(0);
+    setStepResult(null);
+    setStepResults({});
+    setSimulationReport(null);
+  }
+
+  function openSimulationFromCase(item: CaseRecord) {
+    setSelectedCase(item);
+    setPage("simulation");
+    setSimulationSessionId(null);
+    setActiveStepIndex(0);
+    setStepResult(null);
+    setStepResults({});
+    setSimulationReport(null);
   }
 
   function updateCaseFilter<Key extends keyof Omit<CaseFilters, "category">>(
@@ -188,7 +238,10 @@ export default function App() {
     analytics,
     rules,
     activeCategory,
+    activeStepIndex,
     stepResult,
+    stepResults,
+    simulationReport,
     selectedCase,
     selectedResource,
     selectedStudent,
@@ -201,6 +254,9 @@ export default function App() {
     updateCaseFilter,
     resetCaseFilters,
     handleCaseFileImport,
+    setActiveStepIndex,
+    restartSimulation,
+    openSimulationFromCase,
     handleSimulationOption
   };
 
@@ -254,7 +310,10 @@ interface ViewProps {
   analytics: ClassroomAnalytics;
   rules: EvaluationRulesResponse["rules"];
   activeCategory: CaseCategory;
-  stepResult: { score: number; feedback: string } | null;
+  activeStepIndex: number;
+  stepResult: StepResultState | null;
+  stepResults: Record<string, StepResultState>;
+  simulationReport: SimulationReport | null;
   selectedCase: CaseRecord | null;
   selectedResource: LearningResource | null;
   selectedStudent: ClassroomAnalytics["students"][number] | null;
@@ -270,6 +329,9 @@ interface ViewProps {
   ) => void;
   resetCaseFilters: () => void;
   handleCaseFileImport: (file: File) => Promise<void>;
+  setActiveStepIndex: (index: number) => void;
+  restartSimulation: () => void;
+  openSimulationFromCase: (item: CaseRecord) => void;
   handleSimulationOption: (stepId: string, optionId: string) => Promise<void>;
 }
 
@@ -373,6 +435,11 @@ function CasesPage(props: ViewProps) {
             <strong>{active?.name ?? "等待选择案例"}</strong>
             <span>{active?.summary ?? "教师可在左侧选定案例用于课堂讲解。"}</span>
             {active ? <span>性别 {genderLabels[active.gender]} · 年龄 {active.ageRange} · 状态 {active.condition}</span> : null}
+            {active?.tags.includes("跌倒") ? (
+              <button className="inline-action" onClick={() => props.openSimulationFromCase(active)} type="button">
+                进入应急实训
+              </button>
+            ) : null}
           </div>
         </Panel>
       </div>
@@ -559,46 +626,88 @@ function ResourceLibraryPanel({
   );
 }
 
-function SimulationPanel({ handleSimulationOption, overview, scenario, stepResult }: ViewProps) {
+function SimulationPanel({
+  activeStepIndex,
+  handleSimulationOption,
+  overview,
+  restartSimulation,
+  scenario,
+  selectedCase,
+  setActiveStepIndex,
+  simulationReport,
+  stepResult,
+  stepResults
+}: ViewProps) {
+  const steps = scenario?.steps ?? [];
+  const activeStep = steps[activeStepIndex] ?? steps[0];
+  const completedCount = Object.keys(stepResults).length;
+  const totalCount = steps.length;
+
   return (
     <Panel className="simulation-panel" icon={<PlayCircle size={20} />} title="应急处置场景仿真实训">
+      {selectedCase ? <div className="scenario-case">当前案例：{selectedCase.name}</div> : null}
       <div className="scenario-tabs">
-        {(scenario?.steps ?? []).map((step, index) => (
-          <button className={index === 0 ? "active" : ""} key={step.id} type="button">
+        {steps.map((step, index) => (
+          <button
+            className={`${index === activeStepIndex ? "active" : ""} ${stepResults[step.id] ? "completed" : ""}`}
+            key={step.id}
+            onClick={() => setActiveStepIndex(index)}
+            type="button"
+          >
             {step.title}
           </button>
         ))}
+      </div>
+      <div className="simulation-progress">
+        <span>流程进度：{completedCount}/{totalCount || 0}</span>
+        <div><i style={{ width: totalCount ? `${(completedCount / totalCount) * 100}%` : "0%" }} /></div>
       </div>
       <div className="simulation-body">
         <div className="scene-stage">
           <div className="fallen-person" />
         </div>
         <div className="step-list">
-          {(scenario?.steps ?? []).slice(0, 5).map((step, index) => (
-            <div className="step-row" key={step.id}>
+          {steps.slice(0, 5).map((step, index) => (
+            <div className={`step-row ${index === activeStepIndex ? "active" : ""} ${stepResults[step.id] ? "completed" : ""}`} key={step.id}>
               <b>{index + 1}</b>
               <span>{step.title}</span>
-              <strong>{step.options[0]?.score ?? 0}</strong>
+              <strong>{stepResults[step.id]?.score ?? step.options[0]?.score ?? 0}</strong>
             </div>
           ))}
         </div>
       </div>
-      <div className="option-bank">
-        {(scenario?.steps[0]?.options ?? []).map((option) => (
-          <button
-            className="option-button"
-            key={option.id}
-            onClick={() => void handleSimulationOption(scenario!.steps[0].id, option.id)}
-            type="button"
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
+      {!simulationReport ? (
+        <div className="option-bank">
+          {(activeStep?.options ?? []).map((option) => (
+            <button
+              className="option-button"
+              key={option.id}
+              onClick={() => void handleSimulationOption(activeStep.id, option.id)}
+              type="button"
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
       {stepResult ? (
         <div className="feedback-box">
           <strong>本次得分：{stepResult.score}</strong>
           <span>{stepResult.feedback}</span>
+        </div>
+      ) : null}
+      {simulationReport ? (
+        <div className="simulation-report">
+          <div>
+            <strong>实训总分：{simulationReport.totalScore}</strong>
+            <span>已完成：{simulationReport.steps.length}/{totalCount || simulationReport.steps.length}</span>
+          </div>
+          <div className="report-dimensions">
+            {simulationReport.evaluation.map((item) => (
+              <span key={item.dimension}>{item.label} {item.score}分</span>
+            ))}
+          </div>
+          <button onClick={restartSimulation} type="button">重新实训</button>
         </div>
       ) : null}
       <div className="metric-row">
