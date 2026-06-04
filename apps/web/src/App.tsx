@@ -87,9 +87,13 @@ interface StepResultState {
 
 function defaultAnalytics(): ClassroomAnalytics {
   return {
+    metrics: { completionRate: 0, simulationCount: 0, activeStudentCount: 0, weakStepCount: 0 },
     students: [],
     dimensions: [],
-    ability: { knowledge: 0, practice: 0, standardization: 0, collaboration: 0 }
+    ability: { knowledge: 0, practice: 0, standardization: 0, collaboration: 0 },
+    trends: [],
+    weakSteps: [],
+    recommendations: []
   };
 }
 
@@ -567,6 +571,10 @@ function ResourcesPage(props: ViewProps) {
 }
 
 function AnalyticsPage(props: ViewProps) {
+  const completionRate = Math.round(props.analytics.metrics.completionRate * 100);
+  const topWeakStep = props.analytics.weakSteps[0] ?? null;
+  const topRecommendation = props.analytics.recommendations[0] ?? null;
+
   return (
     <ModulePage
       eyebrow="学情分析"
@@ -574,18 +582,58 @@ function AnalyticsPage(props: ViewProps) {
       title="班级能力画像"
       summary="把学生积分、综合能力与安全、质量、时效、规范、沟通等维度聚合成课堂画像，支撑教师课中调整。"
     >
-      <div className="module-layout">
+      <div className="module-layout wide-main">
         <AnalyticsPanel {...props} />
-        <Panel icon={<Activity size={20} />} title="能力雷达数据">
+        <Panel icon={<Activity size={20} />} title="学情诊断与教学建议">
+          <div className="analytics-summary">
+            <div>
+              <span>完成率：{completionRate}%</span>
+              <strong>{props.analytics.metrics.activeStudentCount}</strong>
+              <small>活跃学生</small>
+            </div>
+            <div>
+              <span>实训次数：{props.analytics.metrics.simulationCount}</span>
+              <strong>{props.analytics.metrics.weakStepCount}</strong>
+              <small>薄弱步骤</small>
+            </div>
+          </div>
           <div className="ability-grid">
             <Metric label="知识掌握" value={props.analytics.ability.knowledge} />
             <Metric label="实操能力" value={props.analytics.ability.practice} />
             <Metric label="规范程度" value={props.analytics.ability.standardization} />
             <Metric label="协作沟通" value={props.analytics.ability.collaboration} />
           </div>
+          <div className="trend-strip">
+            {props.analytics.trends.map((item) => (
+              <div key={item.date}>
+                <i style={{ height: `${item.score}%` }} />
+                <span>{item.date}</span>
+              </div>
+            ))}
+          </div>
+          <div className="weak-step-list">
+            {props.analytics.weakSteps.map((item) => (
+              <div className="weak-step-item" key={item.step}>
+                <strong>薄弱步骤：{item.step}</strong>
+                <span>错因占比 {Math.round(item.mistakeRate * 100)}% · {item.suggestion}</span>
+              </div>
+            ))}
+          </div>
+          {topRecommendation ? (
+            <div className="detail-card positive">
+              <strong>推荐训练：{topRecommendation.title}</strong>
+              <span>{topRecommendation.target} · {topRecommendation.reason}</span>
+            </div>
+          ) : null}
           <div className="detail-card">
             <strong>{props.selectedStudent?.name ?? "班级整体"}</strong>
-            <span>当前均分 {props.overview?.metrics.averageScore ?? 82}，可继续下钻到个人训练记录和错因分析。</span>
+            <span>当前均分 {props.selectedStudent?.averageScore ?? props.overview?.metrics.averageScore ?? 82}，可继续下钻到个人训练记录和错因分析。</span>
+            {props.selectedStudent?.latestSimulation ? (
+              <span>
+                最近实训：{props.selectedStudent.latestSimulation.title} {props.selectedStudent.latestSimulation.score}分
+              </span>
+            ) : null}
+            {topWeakStep ? <span>优先复训：{topWeakStep.step}</span> : null}
           </div>
         </Panel>
       </div>
@@ -835,6 +883,8 @@ function SimulationPanel({
 }
 
 function AnalyticsPanel({ analytics, overview, selectedStudent, setSelectedStudent }: ViewProps) {
+  const completionRate = Math.round(analytics.metrics.completionRate * 100);
+
   return (
     <Panel icon={<BarChart3 size={20} />} title="学情分析">
       <div className="ability-ring">
@@ -843,6 +893,10 @@ function AnalyticsPanel({ analytics, overview, selectedStudent, setSelectedStude
           <br />
           综合能力
         </div>
+      </div>
+      <div className="analytics-mini">
+        <span>完成率 {completionRate}%</span>
+        <span>实训 {analytics.metrics.simulationCount}次</span>
       </div>
       <div className="student-list">
         {analytics.students.map((student) => (

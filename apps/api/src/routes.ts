@@ -215,9 +215,13 @@ export function createRoutes() {
 
   router.get("/analytics/classroom", (_request, response) => {
     response.json({
-      students,
+      metrics: analytics.metrics,
+      students: analytics.students ?? students,
       dimensions: analytics.dimensions,
-      ability: analytics.ability
+      ability: analytics.ability,
+      trends: analytics.trends,
+      weakSteps: analytics.weakSteps,
+      recommendations: analytics.recommendations
     });
   });
 

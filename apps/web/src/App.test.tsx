@@ -170,9 +170,22 @@ vi.stubGlobal(
 
     if (url.includes("/api/analytics")) {
       return json({
-        students: [{ id: "student-001", name: "沈峥宇", points: 1100 }],
+        metrics: { completionRate: 0.86, simulationCount: 128, activeStudentCount: 38, weakStepCount: 3 },
+        students: [
+          {
+            id: "student-001",
+            name: "沈峥宇",
+            points: 1100,
+            completionRate: 0.96,
+            averageScore: 90,
+            latestSimulation: { title: "跌倒处置流程", score: 90, date: "2026-06-04" }
+          }
+        ],
         dimensions: [{ label: "安全", score: 92 }],
-        ability: { knowledge: 86, practice: 78, standardization: 91, collaboration: 82 }
+        ability: { knowledge: 86, practice: 78, standardization: 91, collaboration: 82 },
+        trends: [{ date: "06-04", score: 86 }],
+        weakSteps: [{ step: "呼救与转运决策", mistakeRate: 0.31, suggestion: "加强呼救判断。" }],
+        recommendations: [{ title: "跌倒处置复盘案例", target: "呼救转运薄弱学生", reason: "匹配当前最高错因步骤。" }]
       });
     }
 
@@ -331,6 +344,20 @@ describe("App", () => {
     });
     expect(await screen.findByText("资源匹配：1项")).toBeInTheDocument();
     expect(await screen.findByText("适用：老年人 · 器械：秒表")).toBeInTheDocument();
+  });
+
+  it("shows class learning analytics, weak steps, and student insight", async () => {
+    render(<App />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "学情分析" }));
+
+    expect(await screen.findByText("完成率：86%")).toBeInTheDocument();
+    expect(await screen.findByText("实训次数：128")).toBeInTheDocument();
+    expect(await screen.findByText("薄弱步骤：呼救与转运决策")).toBeInTheDocument();
+    expect(await screen.findByText("推荐训练：跌倒处置复盘案例")).toBeInTheDocument();
+
+    await userEvent.click(await screen.findByRole("button", { name: "沈峥宇 1100" }));
+    expect(await screen.findByText("最近实训：跌倒处置流程 90分")).toBeInTheDocument();
   });
 
   it("uploads a batch case file and reports import feedback", async () => {

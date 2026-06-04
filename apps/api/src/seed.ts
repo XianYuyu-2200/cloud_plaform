@@ -244,6 +244,46 @@ export const fallScenario: SimulationScenario = {
 };
 
 export const analytics = {
+  metrics: {
+    completionRate: 0.86,
+    simulationCount: 128,
+    activeStudentCount: 38,
+    weakStepCount: 3
+  },
+  students: [
+    {
+      id: "student-001",
+      name: "沈峥宇",
+      points: 1100,
+      completionRate: 0.96,
+      averageScore: 90,
+      latestSimulation: { title: "跌倒处置流程", score: 90, date: "2026-06-04" }
+    },
+    {
+      id: "student-002",
+      name: "周雨洁",
+      points: 1050,
+      completionRate: 0.91,
+      averageScore: 86,
+      latestSimulation: { title: "平衡能力测评", score: 88, date: "2026-06-03" }
+    },
+    {
+      id: "student-003",
+      name: "李俊杰",
+      points: 1000,
+      completionRate: 0.84,
+      averageScore: 80,
+      latestSimulation: { title: "步态观察", score: 82, date: "2026-06-02" }
+    },
+    {
+      id: "student-004",
+      name: "王悦",
+      points: 960,
+      completionRate: 0.78,
+      averageScore: 76,
+      latestSimulation: { title: "跌倒处置流程", score: 74, date: "2026-06-01" }
+    }
+  ],
   dimensions: [
     { label: "安全", score: 92 },
     { label: "质量", score: 85 },
@@ -256,5 +296,40 @@ export const analytics = {
     practice: 78,
     standardization: 91,
     collaboration: 82
-  }
+  },
+  trends: [
+    { date: "06-01", score: 76 },
+    { date: "06-02", score: 79 },
+    { date: "06-03", score: 82 },
+    { date: "06-04", score: 86 }
+  ],
+  weakSteps: [
+    {
+      step: "呼救与转运决策",
+      mistakeRate: 0.31,
+      suggestion: "加强疑似骨折、意识异常时的呼救判断。"
+    },
+    {
+      step: "检查生命体征",
+      mistakeRate: 0.24,
+      suggestion: "复训呼吸、脉搏、面色和出血检查顺序。"
+    },
+    {
+      step: "询问疼痛与禁忌",
+      mistakeRate: 0.18,
+      suggestion: "增加沟通话术和禁忌动作辨析。"
+    }
+  ],
+  recommendations: [
+    {
+      title: "跌倒处置复盘案例",
+      target: "呼救转运薄弱学生",
+      reason: "匹配当前最高错因步骤，可用于课后分层练习。"
+    },
+    {
+      title: "生命体征检查微课",
+      target: "规范程度待提升学生",
+      reason: "强化检查顺序与记录规范。"
+    }
+  ]
 };

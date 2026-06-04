@@ -105,6 +105,9 @@ describe("platform API", () => {
     const rules = await request(app).get("/api/evaluations/rules").expect(200);
 
     expect(analytics.body.students[0].name).toBe("沈峥宇");
+    expect(analytics.body.metrics.completionRate).toBeGreaterThan(0.8);
+    expect(analytics.body.weakSteps[0].step).toContain("呼救");
+    expect(analytics.body.recommendations[0].title).toContain("跌倒");
     expect(rules.body.rules.map((rule: { label: string }) => rule.label)).toContain("安全");
   });
 });

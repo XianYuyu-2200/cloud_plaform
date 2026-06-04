@@ -15,7 +15,20 @@ export interface Overview {
 }
 
 export interface ClassroomAnalytics {
-  students: Array<{ id: string; name: string; points: number }>;
+  metrics: {
+    completionRate: number;
+    simulationCount: number;
+    activeStudentCount: number;
+    weakStepCount: number;
+  };
+  students: Array<{
+    id: string;
+    name: string;
+    points: number;
+    completionRate?: number;
+    averageScore?: number;
+    latestSimulation?: { title: string; score: number; date: string };
+  }>;
   dimensions: Array<{ label: string; score: number }>;
   ability: {
     knowledge: number;
@@ -23,6 +36,9 @@ export interface ClassroomAnalytics {
     standardization: number;
     collaboration: number;
   };
+  trends: Array<{ date: string; score: number }>;
+  weakSteps: Array<{ step: string; mistakeRate: number; suggestion: string }>;
+  recommendations: Array<{ title: string; target: string; reason: string }>;
 }
 
 export interface EvaluationRulesResponse {
