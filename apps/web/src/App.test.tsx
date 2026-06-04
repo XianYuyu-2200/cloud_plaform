@@ -234,11 +234,33 @@ describe("App", () => {
     render(<App />);
 
     expect(await screen.findByText("智慧康养教学云平台")).toBeInTheDocument();
+    expect(await screen.findByText("课堂演示闭环")).toBeInTheDocument();
     expect(await screen.findByText("案例库分类检索")).toBeInTheDocument();
     expect(await screen.findByText("应急处置场景仿真实训")).toBeInTheDocument();
     expect(await screen.findByText("测评方法库 / 动作库")).toBeInTheDocument();
     expect(await screen.findByText("学情分析")).toBeInTheDocument();
     expect(await screen.findByText("评价体系")).toBeInTheDocument();
+  });
+
+  it("connects the cockpit teaching demo flow to core modules", async () => {
+    render(<App />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "查看资源匹配" }));
+    expect(await screen.findByText("教学资源详情")).toBeInTheDocument();
+    expect(await screen.findByText("视频地址：/media/balance.mp4")).toBeInTheDocument();
+
+    await userEvent.click(await screen.findByRole("button", { name: "工作台" }));
+    await userEvent.click(await screen.findByRole("button", { name: "开始课堂演示" }));
+    expect(await screen.findByText("跌倒处置流程")).toBeInTheDocument();
+    expect(await screen.findByText("当前案例：高血压跌倒风险")).toBeInTheDocument();
+
+    await userEvent.click(await screen.findByRole("button", { name: "工作台" }));
+    await userEvent.click(await screen.findByRole("button", { name: "查看学情分析" }));
+    expect(await screen.findByText("班级能力画像")).toBeInTheDocument();
+
+    await userEvent.click(await screen.findByRole("button", { name: "工作台" }));
+    await userEvent.click(await screen.findByRole("button", { name: "查看评价体系" }));
+    expect(await screen.findByText("评价维度配置")).toBeInTheDocument();
   });
 
   it("submits a fall-response step and displays scoring feedback", async () => {

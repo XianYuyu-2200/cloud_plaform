@@ -231,6 +231,28 @@ export default function App() {
     setSimulationReport(null);
   }
 
+  function selectDemoDefaults() {
+    const demoCase = selectedCase ?? cases[0] ?? null;
+    const demoResource = selectedResource ?? resources[0] ?? null;
+    if (demoCase) setSelectedCase(demoCase);
+    if (demoResource) setSelectedResource(demoResource);
+  }
+
+  function openTeachingModule(targetPage: Page) {
+    selectDemoDefaults();
+    setPage(targetPage);
+  }
+
+  function startTeachingDemo() {
+    selectDemoDefaults();
+    setSimulationSessionId(null);
+    setActiveStepIndex(0);
+    setStepResult(null);
+    setStepResults({});
+    setSimulationReport(null);
+    setPage("simulation");
+  }
+
   function openSimulationFromCase(item: CaseRecord) {
     setSelectedCase(item);
     setPage("simulation");
@@ -320,7 +342,9 @@ export default function App() {
     resetResourceFilters,
     handleCaseFileImport,
     setActiveStepIndex,
+    openTeachingModule,
     restartSimulation,
+    startTeachingDemo,
     openSimulationFromCase,
     handleSimulationOption
   };
@@ -401,7 +425,9 @@ interface ViewProps {
   resetResourceFilters: () => void;
   handleCaseFileImport: (file: File) => Promise<void>;
   setActiveStepIndex: (index: number) => void;
+  openTeachingModule: (page: Page) => void;
   restartSimulation: () => void;
+  startTeachingDemo: () => void;
   openSimulationFromCase: (item: CaseRecord) => void;
   handleSimulationOption: (stepId: string, optionId: string) => Promise<void>;
 }
@@ -409,6 +435,8 @@ interface ViewProps {
 function CockpitView(props: ViewProps) {
   return (
     <section className="cockpit-grid">
+      <TeachingFlowPanel {...props} />
+
       <aside className="stack">
         <CaseLibraryPanel {...props} compact />
         <ResourceLibraryPanel {...props} compact />
@@ -421,6 +449,85 @@ function CockpitView(props: ViewProps) {
         <EvaluationPanel {...props} />
       </aside>
     </section>
+  );
+}
+
+function TeachingFlowPanel(props: ViewProps) {
+  const demoCase = props.selectedCase ?? props.cases[0] ?? null;
+  const demoResource = props.selectedResource ?? props.resources[0] ?? null;
+  const completionRate = Math.round(props.analytics.metrics.completionRate * 100);
+  const primaryDimension = props.selectedDimension ?? props.analytics.dimensions[0] ?? null;
+
+  const flowSteps = [
+    {
+      title: "1 选定真实案例",
+      value: demoCase?.name ?? "等待案例数据",
+      detail: demoCase ? `${demoCase.ageRange} · ${demoCase.condition}` : "从案例库进入课堂任务",
+      action: "查看案例筛选",
+      page: "cases" as Page
+    },
+    {
+      title: "2 匹配测评/动作",
+      value: demoResource?.title ?? "等待资源数据",
+      detail: demoResource ? `${resourceTypeLabels[demoResource.type]} · ${demoResource.bodyPart}` : "关联测评方法与训练动作",
+      action: "查看资源匹配",
+      page: "resources" as Page
+    },
+    {
+      title: "3 进入应急实训",
+      value: props.scenario?.title ?? "跌倒处置场景",
+      detail: `任务步骤 ${props.scenario?.steps.length ?? 0} 步，分步骤评分`,
+      action: "开始课堂演示",
+      page: "simulation" as Page
+    },
+    {
+      title: "4 回流学情分析",
+      value: `${completionRate}% 完成率`,
+      detail: `${props.analytics.metrics.activeStudentCount}名学生 · ${props.analytics.metrics.weakStepCount}个薄弱步骤`,
+      action: "查看学情分析",
+      page: "analytics" as Page
+    },
+    {
+      title: "5 生成评价闭环",
+      value: primaryDimension ? `${primaryDimension.label} ${primaryDimension.score}分` : "等待评价维度",
+      detail: `规则 ${props.rules.length} 维 · 等级 ${props.evaluationLevels.length} 档`,
+      action: "查看评价体系",
+      page: "evaluation" as Page
+    }
+  ];
+
+  return (
+    <Panel className="teaching-flow-panel" icon={<Activity size={20} />} title="课堂演示闭环">
+      <div className="flow-summary">
+        <div>
+          <span>演示主线</span>
+          <strong>案例 → 资源 → 实训 → 学情 → 评价</strong>
+        </div>
+        <button aria-label="一键开始课堂演示" onClick={props.startTeachingDemo} type="button">开始课堂演示</button>
+      </div>
+      <div className="flow-steps">
+        {flowSteps.map((step) => (
+          <button
+            aria-label={step.action}
+            className={step.page === "simulation" ? "flow-step primary" : "flow-step"}
+            key={step.title}
+            onClick={() => {
+              if (step.page === "simulation") {
+                props.startTeachingDemo();
+                return;
+              }
+              props.openTeachingModule(step.page);
+            }}
+            type="button"
+          >
+            <span>{step.title}</span>
+            <strong>{step.value}</strong>
+            <small>{step.detail}</small>
+            <em>{step.action}</em>
+          </button>
+        ))}
+      </div>
+    </Panel>
   );
 }
 
