@@ -28,7 +28,8 @@ button {
     linear-gradient(180deg, #1d2b44 0%, #111f38 48%, #081527 100%);
   padding: 18px 26px 24px;
   position: relative;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .platform-shell::before,
@@ -422,7 +423,8 @@ button {
   padding: 14px;
   position: relative;
   z-index: 1;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .segmented,
@@ -1374,9 +1376,8 @@ button.score-bar:hover {
   border-left: 3px solid #92f26c;
   background: rgba(4, 22, 44, .68);
   font-size: 13px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 1024px) {
